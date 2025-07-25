@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Maps and Places Autocomplete</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <script>
+      async function init() {
+        await customElements.whenDefined('gmp-map');
+
+        const map = document.querySelector('gmp-map');
+        const marker = document.querySelector('gmp-advanced-marker');
+        const placePicker = document.querySelector('gmpx-place-picker');
+        const infowindow = new google.maps.InfoWindow();
+
+        map.innerMap.setOptions({
+          mapTypeControl: false
+        });
+
+        placePicker.addEventListener('gmpx-placechange', () => {
+          const place = placePicker.value;
+
+          if (!place.location) {
+            window.alert(
+              "No details available for input: '" + place.name + "'"
+            );
+            infowindow.close();
+            marker.position = null;
+            return;
+          }
+
+          if (place.viewport) {
+            map.innerMap.fitBounds(place.viewport);
+          } else {
+            map.center = place.location;
+            map.zoom = 17;
+          }
+
+          marker.position = place.location;
+          infowindow.setContent(
+            `<strong>${place.displayName}</strong><br>
+             <span>${place.formattedAddress}</span>
+          `);
+          infowindow.open(map.innerMap, marker);
+        });
+      }
+
+      document.addEventListener('DOMContentLoaded', init);
+    </script>
+    
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/@googlemaps/extended-component-library/0.6.11/index.min.js">
+    </script>
+
+    <script>
+      document.querySelectorAll('.icon-category input').forEach((checkbox) => {
+        checkbox.addEventListener('change', function () {
+          const label = this.parentElement;
+          if (this.checked) {
+            label.style.borderColor = '#C8A2C8';
+          } else {
+            label.style.borderColor = 'transparent';
+          }
+        });
+      });
+    </script>
+
+    <style>
+      html,
+      body {
+        height: 75%;
+        margin: 10;
+        padding: 50;
+      }
+
+      .place-picker-container {
+        padding: 20px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1> Local Explorer</h1>
+
+    <gmpx-api-loader key="AIzaSyBwvka2YMrQg62Le3Shk4M7Cfae9qo6j6M" solution-channel="GMP_GE_mapsandplacesautocomplete_v2">
+    </gmpx-api-loader>
+
+    <!-- Address Receiver -->
+    <div slot="control-block-start-inline-start" class="place-picker-container">
+      <gmpx-place-picker placeholder="Enter an address"></gmpx-place-picker>
+    </div>
+
+    <!-- Multiple Attribute Selection -->
+    <div class="container my-4">
+      <form method="POST" action="{{ url_for('list_categories') }}">
+        <label>Choose one or more categories:</label>
+        <div class="icon-category-group">
+          <label class="icon-category" size="3">
+            <input type="checkbox" name="category" value="food">
+            <i class="fas fa-utensils"></i>
+            <span>Food</span>
+          </label>
+        
+          <label class="icon-category">
+            <input type="checkbox" name="category" value="entertainment">
+            <i class="fas fa-film"></i>
+            <span>Entertainment</span>
+          </label>
+        
+          <label class="icon-category">
+            <input type="checkbox" name="category" value="drink">
+            <i class="fas fa-glass-martini-alt"></i>
+            <span>Drinks</span>
+          </label>
+        
+          <label class="icon-category">
+            <input type="checkbox" name="category" value="retail">
+            <i class="fas fa-shopping-bag"></i>
+            <span>Retail</span>
+          </label>
+        </div>
+      
+        <br>
+        <input type="submit" value="Submit">
+      </form>
+  </div>
+
+    <!-- Google Map -->
+    <gmp-map center="-33.8688,151.2093" zoom="13" map-id="DEMO_MAP_ID">
+      <gmp-advanced-marker></gmp-advanced-marker>
+    </gmp-map>
+    <!-- new comment-->
+  </body>
+</html>

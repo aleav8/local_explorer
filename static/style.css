@@ -1,0 +1,47 @@
+.icon-category-group {
+  display: flex;
+  gap: 20px; /* space between icons */
+  flex-wrap: wrap; /* wrap to next line if too many */
+  justify-content: center; /* center horizontally */
+  align-items: center; /* align vertically */
+}
+
+.icon-category {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 2px solid transparent;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.icon-category input[type="checkbox"] {
+  display: none;
+}
+
+.icon-category i {
+  font-size: 2rem;
+  color: #555;
+  margin-bottom: 5px;
+}
+
+.icon-category span {
+  font-size: 1rem;
+  color: #333;
+}
+
+.icon-category input:checked ~ i,
+.icon-category input:checked ~ span {
+  color: #C8A2C8; /* lilac */
+}
+
+.icon-category input:checked ~ i {
+  transform: scale(1.2);
+}
+
+.icon-category input:checked ~ span {
+  font-weight: bold;
+}
