@@ -43,26 +43,53 @@
              <span>${place.formattedAddress}</span>
           `);
           infowindow.open(map.innerMap, marker);
+
+          // Set hidden input to the address
+          if (place) {
+            document.getElementById("address-input").value = place.formattedAddress;
+            document.getElementById("latitude-input").value = place.location.lat();
+            document.getElementById("longitude-input").value = place.location.lng();
+          }
+
+          // Clear old markers if you support multiple
+          const service = new google.maps.places.PlacesService(map.innerMap);
+
+          // Example: use 'restaurant' as a default or get from checkbox
+          const selectedTypes = Array.from(document.querySelectorAll('.icon-category input:checked'))
+            .map(cb => cb.value);
+
+          selectedTypes.forEach((type) => {
+            service.nearbySearch({
+              location: place.location,
+              radius: 1000, // or whatever range you want
+              type: type
+            }, (results, status) => {
+              if (status === google.maps.places.PlacesServiceStatus.OK) {
+                for (let i = 0; i < results.length; i++) {
+                  const result = results[i];
+                  const marker = new google.maps.Marker({
+                    map: map.innerMap,
+                    position: result.geometry.location,
+                    title: result.name
+                  });
+
+                  marker.addListener('click', () => {
+                    infowindow.setContent(
+                      `<strong>${result.name}</strong><br>
+                      ${result.vicinity}`
+                    );
+                    infowindow.open(map.innerMap, marker);
+                  });
+                }
+              }
+            });
+          });
         });
       }
 
-      document.addEventListener('DOMContentLoaded', init);
     </script>
     
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/@googlemaps/extended-component-library/0.6.11/index.min.js">
-    </script>
-
-    <script>
-      document.querySelectorAll('.icon-category input').forEach((checkbox) => {
-        checkbox.addEventListener('change', function () {
-          const label = this.parentElement;
-          if (this.checked) {
-            label.style.borderColor = '#C8A2C8';
-          } else {
-            label.style.borderColor = 'transparent';
-          }
-        });
-      });
     </script>
 
     <style>
@@ -87,12 +114,17 @@
 
     <!-- Address Receiver -->
     <div slot="control-block-start-inline-start" class="place-picker-container">
-      <gmpx-place-picker placeholder="Enter an address"></gmpx-place-picker>
+      <gmpx-place-picker id="myPlacePicker" placeholder="Enter an address"></gmpx-place-picker>
     </div>
 
     <!-- Multiple Attribute Selection -->
     <div class="container my-4">
       <form method="POST" action="{{ url_for('list_categories') }}">
+        <!-- hidden input to store address input -->
+        <input type="hidden" name="address" id="address-input">
+        <input type="hidden" name="longitude" id="longitude-input">
+        <input type="hidden" name="latitude" id="latitude-input">
+
         <label>Choose one or more categories:</label>
         <div class="icon-category-group">
           <label class="icon-category" size="3">
@@ -119,6 +151,8 @@
             <span>Retail</span>
           </label>
         </div>
+
+        <input type="hidden" id="categories" value="{{ ','.join(category) }}">
       
         <br>
         <input type="submit" value="Submit">
@@ -129,6 +163,46 @@
     <gmp-map center="-33.8688,151.2093" zoom="13" map-id="DEMO_MAP_ID">
       <gmp-advanced-marker></gmp-advanced-marker>
     </gmp-map>
-    <!-- new comment-->
+
+
+
+    <!-- icon colour change -->
+    <script>
+      document.querySelectorAll('.icon-category input').forEach((checkbox) => {
+        checkbox.addEventListener('change', function () {
+          const label = this.parentElement;
+          if (this.checked) {
+            label.classList.add('selected');
+          } else {
+            label.classList.remove('selected');
+          }
+        });
+
+        // Trigger once to apply border style on load
+        if (checkbox.checked) {
+          checkbox.dispatchEvent(new Event('change'));
+        }
+      });
+    </script>
+
+    <script>
+      window.addEventListener('DOMContentLoaded', () => {
+        init(); // now the init() function is triggered after DOM is ready
+      });
+    </script>
+
+    <script>
+      document.querySelector('form').addEventListener('submit', function (e) {
+        const address = document.getElementById('address-input').value;
+        const lat = document.getElementById('latitude-input').value;
+        const lng = document.getElementById('longitude-input').value;
+    
+        if (!address || !lat || !lng) {
+          e.preventDefault();
+          alert("Please select a location from the suggestions before submitting.");
+        }
+      });
+    </script>
+
   </body>
 </html>

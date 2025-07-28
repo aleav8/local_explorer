@@ -39,11 +39,17 @@ def list_categories():
     categoriesfield = request.form.getlist('category')
     print(categoriesfield)
     
-    if not categoriesfield:
-        flash('No categories were selected.')
-
+    addressfield = request.form.get('address')
+    print(addressfield)
+    
+    longitudefield = request.form.get('longitude')
+    print(longitudefield)
+    
+    latitudefield = request.form.get('latitude')
+    print(latitudefield)
+        
     page['title'] = 'Selected Categories'
-    return render_template('list_categories.html', page=page, session=session, categories=categoriesfield)    
+    return render_template('list_categories.html', page=page, session=session, categories=categoriesfield, address=addressfield, longitude=longitudefield, latitude=latitudefield)    
 
 if __name__ == '__main__':
     portchoice = '5001'  
