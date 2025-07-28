@@ -1,5 +1,5 @@
 # Importing the Flask Framework
-from flask import Flask, render_template, flash, session, request
+from flask import Flask, render_template, flash, session, request, redirect, url_for
 import sys
 
 # appsetup
@@ -27,29 +27,35 @@ def home():
 #Retrieve All Selected Categories#
 ########################
 
-@app.route('/categories', methods=['POST'])
+@app.route('/categories', methods=['GET', 'POST'])
 def list_categories():
-    '''
-    List all categories selected
-    '''
-    print("Route /categories was called")
-    sys.stdout.flush()
+    if request.method == 'POST':
+        categoriesfield = request.form.getlist('category')
+        latitudefield = request.form.get('latitude')
+        longitudefield = request.form.get('longitude')
+        # Convert lists to multiple query params or comma separated string
+        categories_str = ','.join(categoriesfield)
+        
+        print(categoriesfield)
+        print(longitudefield)
+        print(latitudefield)
+
+
+        # Redirect to GET URL with params
+        return redirect(url_for('list_categories', categories=categoriesfield, longitude=longitudefield, latitude=latitudefield))
     
-    # Retrieve user input from GET request
-    categoriesfield = request.form.getlist('category')
+    # GET: get params from URL
+    categories_str = request.args.get('category', '')
+    categoriesfield = categories_str.split(',') if categories_str else []
+    latitudefield = request.args.get('latitude')
+    longitudefield = request.args.get('longitude')
+    
     print(categoriesfield)
-    
-    addressfield = request.form.get('address')
-    print(addressfield)
-    
-    longitudefield = request.form.get('longitude')
     print(longitudefield)
-    
-    latitudefield = request.form.get('latitude')
     print(latitudefield)
         
     page['title'] = 'Selected Categories'
-    return render_template('list_categories.html', page=page, session=session, categories=categoriesfield, address=addressfield, longitude=longitudefield, latitude=latitudefield)    
+    return render_template('list_categories.html', page=page, session=session, categories=categoriesfield, longitude=longitudefield, latitude=latitudefield)    
 
 if __name__ == '__main__':
     portchoice = '5001'  
