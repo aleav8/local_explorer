@@ -45,3 +45,42 @@
 .icon-category input:checked ~ span {
   font-weight: bold;
 }
+
+html, 
+body {
+  height: 100%;
+  margin: 10;
+  padding: 50;
+  font-family: Arial, sans-serif;
+}
+
+.place-picker-container {
+  padding: 20px;
+}
+
+.map-display {
+  height: 50%;
+  width:600px;
+
+}
+
+.container {
+  padding: 1rem;
+}
+
+#places-list {
+  padding: 1rem;
+  border-top: 1px solid #ccc;
+}
+#places-list ul {
+  list-style: none;
+  padding-left: 0;
+}
+#places-list li {
+  padding: 0.5rem 0;
+  cursor: pointer;
+}
+#places-list li:hover {
+  background-color: #f9f9f9;
+}
+

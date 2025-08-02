@@ -17,49 +17,35 @@ app.debug = True
 ##  INDEX
 #####################################################
 
-# What happens when we go to our website (home page)
-@app.route("/")
-def home():
-    page['title'] = 'Welcome'
-    return render_template('index.html', session=session, page=page)
 
 ########################
 #Retrieve All Selected Categories#
 ########################
 
-@app.route('/categories', methods=['GET', 'POST'])
+@app.route('/', methods=['GET', 'POST'])
 def list_categories():
     if request.method == 'POST':
         categoriesfield = request.form.getlist('category')
-        latitudefield = request.form.get('latitude')
-        longitudefield = request.form.get('longitude')
-        # Convert lists to multiple query params or comma separated string
+        addressfield = request.form.get('address')
+    
         categories_str = ','.join(categoriesfield)
         
         print(categoriesfield)
-        print(longitudefield)
-        print(latitudefield)
+        print(addressfield)
 
-
-        # Redirect to GET URL with params
-        return redirect(url_for('list_categories', categories=categoriesfield, longitude=longitudefield, latitude=latitudefield))
+        # Use 'category' param here to match GET handler and template
+        return redirect(url_for('list_categories', 
+                            category=categories_str, 
+                            address=addressfield))
     
-    # GET: get params from URL
+    # GET
     categories_str = request.args.get('category', '')
     categoriesfield = categories_str.split(',') if categories_str else []
-    latitudefield = request.args.get('latitude')
-    longitudefield = request.args.get('longitude')
     
+    addressfield = request.args.get('address')
     print(categoriesfield)
-    print(longitudefield)
-    print(latitudefield)
+    print(addressfield)
         
-    page['title'] = 'Selected Categories'
-    return render_template('list_categories.html', page=page, session=session, categories=categoriesfield, longitude=longitudefield, latitude=latitudefield)    
-
-if __name__ == '__main__':
-    portchoice = '5001'  
-    print("-"*70)
-    print(f"If you are on Linux/Your Own Computer: Please open your browser to: http://127.0.0.1:{portchoice}/")
-    print("-"*70)
-    app.run(debug=True, host='0.0.0.0', port=int(portchoice))
+    return render_template('index.html',
+                           address=addressfield,
+                           category=categoriesfield)

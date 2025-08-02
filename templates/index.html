@@ -1,85 +1,150 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>Maps and Places Autocomplete</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Local Explorer</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/@googlemaps/extended-component-library/0.6.11/index.min.js"></script>
 
-    <script>
-      async function init() {
-        await customElements.whenDefined('gmp-map');
+</head>
+<body>
+  <div class="container">
+    <h1>Local Explorer</h1>
 
-        const map = document.querySelector('gmp-map');
-        const marker = document.querySelector('gmp-advanced-marker');
-        const placePicker = document.querySelector('gmpx-place-picker');
-        const infowindow = new google.maps.InfoWindow();
+    <gmpx-api-loader key="AIzaSyBwvka2YMrQg62Le3Shk4M7Cfae9qo6j6M" solution-channel="GMP_GE_mapsandplacesautocomplete_v2"></gmpx-api-loader>
 
-        map.innerMap.setOptions({
-          mapTypeControl: false
-        });
+    <div class="place-picker-container">
+      <gmpx-place-picker id="myPlacePicker" placeholder="Enter an address"></gmpx-place-picker>
+    </div>
 
-        placePicker.addEventListener('gmpx-placechange', () => {
-          const place = placePicker.value;
+    <form method="POST" action="{{ url_for('list_categories') }}">
+      <input type="hidden" name="address" id="address-input" value="{{ address or '' }}">
+      <label>Choose one or more categories:</label>
+      <div class="icon-category-group">
+        <label class="icon-category" size="3">
+          <input type="checkbox" name="category" value="food" {% if 'food' in category %}checked{% endif %}>
+          <i class="fas fa-utensils"></i>
+          <span>Food</span>
+        </label>
 
-          if (!place.location) {
-            window.alert(
-              "No details available for input: '" + place.name + "'"
-            );
-            infowindow.close();
-            marker.position = null;
-            return;
-          }
+        <label class="icon-category">
+          <input type="checkbox" name="category" value="entertainment" {% if 'entertainment' in category %}checked{% endif %}>
+          <i class="fas fa-film"></i>
+          <span>Entertainment</span>
+        </label>
 
-          if (place.viewport) {
-            map.innerMap.fitBounds(place.viewport);
-          } else {
-            map.center = place.location;
-            map.zoom = 17;
-          }
+        <label class="icon-category">
+          <input type="checkbox" name="category" value="drink" {% if 'drink' in category %}checked{% endif %}>
+          <i class="fas fa-glass-martini-alt"></i>
+          <span>Drinks</span>
+        </label>
 
-          marker.position = place.location;
-          infowindow.setContent(
-            `<strong>${place.displayName}</strong><br>
-             <span>${place.formattedAddress}</span>
-          `);
-          infowindow.open(map.innerMap, marker);
+        <label class="icon-category">
+          <input type="checkbox" name="category" value="retail" {% if 'retail' in category %}checked{% endif %}>
+          <i class="fas fa-shopping-bag"></i>
+          <span>Retail</span>
+        </label>
+        </div>
 
-          // Set hidden input to the address
-          if (place) {
-            document.getElementById("address-input").value = place.formattedAddress;
-            document.getElementById("latitude-input").value = place.location.lat();
-            document.getElementById("longitude-input").value = place.location.lng();
-          }
+        <input type="hidden" id="categories" value="{{ ','.join(category) }}">
+    </form>
+  </div>
 
-          // Clear old markers if you support multiple
-          const service = new google.maps.places.PlacesService(map.innerMap);
 
-          // Example: use 'restaurant' as a default or get from checkbox
-          const selectedTypes = Array.from(document.querySelectorAll('.icon-category input:checked'))
-            .map(cb => cb.value);
 
-          selectedTypes.forEach((type) => {
+  <div class="map-display">
+    <gmp-map center="-33.8688,151.2093" zoom="13" map-id="DEMO_MAP_ID">
+      <gmp-advanced-marker></gmp-advanced-marker>
+    </gmp-map>
+  </div>
+
+  <div id="places-list"></div>
+
+  <script>
+    const CATEGORY_TYPE_MAPPING = {
+      food: ["restaurant", "bakery", "cafe"],
+      entertainment: ["movie_theater", "museum", "art_gallery"],
+      drink: ["bar", "night_club"],
+      retail: ["shopping_mall", "clothing_store", "convenience_store"]
+    };
+
+    let placeMarkers = [];
+
+    async function init() {
+      await customElements.whenDefined('gmp-map');
+
+      const map = document.querySelector('gmp-map');
+      const marker = document.querySelector('gmp-advanced-marker');
+      const placePicker = document.querySelector('gmpx-place-picker');
+      const infowindow = new google.maps.InfoWindow();
+      const placesListDiv = document.getElementById('places-list');
+
+      function clearMarkers() {
+        placeMarkers.forEach(marker => marker.setMap(null));
+        placeMarkers = [];
+      }
+
+      function capitalize(str) {
+        return str.charAt(0).toUpperCase() + str.slice(1);
+      }
+
+      function displayPlaces(location, selectedCategories) {
+        const service = new google.maps.places.PlacesService(map.innerMap);
+        clearMarkers();
+        placesListDiv.innerHTML = '';
+
+        selectedCategories.forEach((categoryKey) => {
+          const types = CATEGORY_TYPE_MAPPING[categoryKey];
+          if (!types) return;
+        
+          const categorySection = document.createElement('div');
+          categorySection.innerHTML = `<h3>${capitalize(categoryKey)}</h3>`;
+          const ul = document.createElement('ul');
+        
+          // For each type in this category, perform separate searches and add results to the same ul
+          types.forEach(type => {
             service.nearbySearch({
-              location: place.location,
-              radius: 1000, // or whatever range you want
-              type: type
+              location,
+              radius: 1000,
+              type
             }, (results, status) => {
               if (status === google.maps.places.PlacesServiceStatus.OK) {
-                for (let i = 0; i < results.length; i++) {
-                  const result = results[i];
-                  const marker = new google.maps.Marker({
+                results.forEach((result) => {
+                  // Check if the place is already listed (to avoid duplicates)
+                  if ([...ul.children].some(li => li.textContent === result.name)) return;
+        
+                  const newMarker = new google.maps.Marker({
                     map: map.innerMap,
                     position: result.geometry.location,
                     title: result.name
                   });
+        
+                  newMarker.addListener('click', () => {
+                    infowindow.setContent(`<strong>${result.name}</strong><br>${result.vicinity || ''}`);
+                    infowindow.open(map.innerMap, newMarker);
 
-                  marker.addListener('click', () => {
-                    infowindow.setContent(
-                      `<strong>${result.name}</strong><br>
-                      ${result.vicinity}`
-                    );
-                    infowindow.open(map.innerMap, marker);
+                    // on clicking a business, send the user to the top of the page
+                    document.body.scrollTop = 0; // For Safari
+                    document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
+
                   });
+        
+                  placeMarkers.push(newMarker);
+        
+                  const li = document.createElement('li');
+                  li.textContent = result.name;
+                  li.addEventListener('click', () => {
+                    map.innerMap.panTo(result.geometry.location);
+                    map.innerMap.setZoom(17);
+                    google.maps.event.trigger(newMarker, 'click');
+                  });
+                  ul.appendChild(li);
+                });
+        
+                if (!categorySection.contains(ul)) {
+                  categorySection.appendChild(ul);
+                  placesListDiv.appendChild(categorySection);
                 }
               }
             });
@@ -87,122 +152,73 @@
         });
       }
 
-    </script>
-    
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/@googlemaps/extended-component-library/0.6.11/index.min.js">
-    </script>
+      placePicker.addEventListener('gmpx-placechange', () => {
+        const place = placePicker.value;
+        if (!place.location) return;
 
-    <style>
-      html,
-      body {
-        height: 75%;
-        margin: 10;
-        padding: 50;
-      }
+        map.center = place.location;
+        map.zoom = 15;
+        marker.position = place.location;
 
-      .place-picker-container {
-        padding: 20px;
-      }
-    </style>
-  </head>
+        infowindow.setContent(`<strong>${place.displayName}</strong><br>${place.formattedAddress}`);
+        infowindow.open(map.innerMap, marker);
+        document.getElementById("address-input").value = place.formattedAddress;
 
-  <body>
-    <h1> Local Explorer</h1>
+        const selectedCategories = Array.from(document.querySelectorAll('.icon-category input:checked')).map(cb => cb.value);
+        if (selectedCategories.length > 0) {
+          displayPlaces(place.location, selectedCategories);
+        }
+      });
 
-    <gmpx-api-loader key="AIzaSyBwvka2YMrQg62Le3Shk4M7Cfae9qo6j6M" solution-channel="GMP_GE_mapsandplacesautocomplete_v2">
-    </gmpx-api-loader>
-
-    <!-- Address Receiver -->
-    <div slot="control-block-start-inline-start" class="place-picker-container">
-      <gmpx-place-picker id="myPlacePicker" placeholder="Enter an address"></gmpx-place-picker>
-    </div>
-
-    <!-- Multiple Attribute Selection -->
-    <div class="container my-4">
-      <form method="POST" action="{{ url_for('list_categories') }}">
-        <!-- hidden input to store address input -->
-        <input type="hidden" name="address" id="address-input">
-        <input type="hidden" name="longitude" id="longitude-input">
-        <input type="hidden" name="latitude" id="latitude-input">
-
-        <label>Choose one or more categories:</label>
-        <div class="icon-category-group">
-          <label class="icon-category" size="3">
-            <input type="checkbox" name="category" value="food">
-            <i class="fas fa-utensils"></i>
-            <span>Food</span>
-          </label>
-        
-          <label class="icon-category">
-            <input type="checkbox" name="category" value="entertainment">
-            <i class="fas fa-film"></i>
-            <span>Entertainment</span>
-          </label>
-        
-          <label class="icon-category">
-            <input type="checkbox" name="category" value="drink">
-            <i class="fas fa-glass-martini-alt"></i>
-            <span>Drinks</span>
-          </label>
-        
-          <label class="icon-category">
-            <input type="checkbox" name="category" value="retail">
-            <i class="fas fa-shopping-bag"></i>
-            <span>Retail</span>
-          </label>
-        </div>
-
-        <input type="hidden" id="categories" value="{{ ','.join(category) }}">
+      const initialAddress = {{ address|tojson|safe }};
       
-        <br>
-        <input type="submit" value="Submit">
-      </form>
-  </div>
+      if (initialAddress) {
+        placePicker.value = initialAddress;
+        const geocoder = new google.maps.Geocoder();
+        geocoder.geocode({ address: initialAddress }, (results, status) => {
+          if (status === 'OK' && results[0]) {
+            const location = results[0].geometry.location;
+            map.center = location;
+            map.zoom = 15;
+            marker.position = location;
+            infowindow.setContent(`<strong>${results[0].formatted_address}</strong>`);
+            infowindow.open(map.innerMap, marker);
 
-    <!-- Google Map -->
-    <gmp-map center="-33.8688,151.2093" zoom="13" map-id="DEMO_MAP_ID">
-      <gmp-advanced-marker></gmp-advanced-marker>
-    </gmp-map>
-
-
-
-    <!-- icon colour change -->
-    <script>
-      document.querySelectorAll('.icon-category input').forEach((checkbox) => {
-        checkbox.addEventListener('change', function () {
-          const label = this.parentElement;
-          if (this.checked) {
-            label.classList.add('selected');
-          } else {
-            label.classList.remove('selected');
+            const selectedCategories = Array.from(document.querySelectorAll('.icon-category input:checked')).map(cb => cb.value);
+            if (selectedCategories.length > 0) {
+              displayPlaces(location, selectedCategories);
+            }
           }
         });
+      }
+    }
 
-        // Trigger once to apply border style on load
-        if (checkbox.checked) {
-          checkbox.dispatchEvent(new Event('change'));
-        }
+    window.addEventListener('DOMContentLoaded', () => init());
+
+    document.querySelectorAll('.icon-category input').forEach((checkbox) => {
+      checkbox.addEventListener('change', function () {
+        const label = this.parentElement;
+        label.classList.toggle('selected', this.checked);
       });
-    </script>
+      if (checkbox.checked) {
+        checkbox.dispatchEvent(new Event('change'));
+      }
+    });
 
-    <script>
-      window.addEventListener('DOMContentLoaded', () => {
-        init(); // now the init() function is triggered after DOM is ready
+    // Submit form automatically when checkbox changes
+    document.querySelectorAll('input[name="category"]').forEach((checkbox) => {
+      checkbox.addEventListener('change', () => {
+        document.querySelector('form').submit();
       });
-    </script>
+    });
 
-    <script>
-      document.querySelector('form').addEventListener('submit', function (e) {
-        const address = document.getElementById('address-input').value;
-        const lat = document.getElementById('latitude-input').value;
-        const lng = document.getElementById('longitude-input').value;
-    
-        if (!address || !lat || !lng) {
-          e.preventDefault();
-          alert("Please select a location from the suggestions before submitting.");
-        }
-      });
-    </script>
-
-  </body>
+    document.querySelector('form').addEventListener('submit', function (e) {
+      const address = document.getElementById('address-input').value;
+      if (!address) {
+        e.preventDefault();
+        alert("Please select a location from the suggestions before submitting.");
+      }
+    });
+  </script>
+</body>
 </html>
