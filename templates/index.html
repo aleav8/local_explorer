@@ -12,7 +12,10 @@
   <div class="container">
     <h1>Local Explorer</h1>
 
-    <gmpx-api-loader key="AIzaSyBwvka2YMrQg62Le3Shk4M7Cfae9qo6j6M" solution-channel="GMP_GE_mapsandplacesautocomplete_v2"></gmpx-api-loader>
+    <gmpx-api-loader key="AIzaSyBwvka2YMrQg62Le3Shk4M7Cfae9qo6j6M" 
+    solution-channel="GMP_GE_mapsandplacesautocomplete_v2"
+    libraries="places">
+    </gmpx-api-loader>
 
     <div class="place-picker-container">
       <gmpx-place-picker id="myPlacePicker" placeholder="Enter an address"></gmpx-place-picker>
@@ -45,6 +48,12 @@
           <i class="fas fa-shopping-bag"></i>
           <span>Retail</span>
         </label>
+
+        <label class="icon-category">
+          <input type="checkbox" name="category" value="healthcare" {% if 'healthcare' in category %}checked{% endif %}>
+          <i class="fas fa-plus-circle"></i>
+          <span>Healthcare</span>
+        </label>
         </div>
 
         <input type="hidden" id="categories" value="{{ ','.join(category) }}">
@@ -62,12 +71,15 @@
   <div id="places-list"></div>
 
   <script>
-    const CATEGORY_TYPE_MAPPING = {
-      food: ["restaurant", "bakery", "cafe"],
-      entertainment: ["movie_theater", "museum", "art_gallery"],
-      drink: ["bar", "night_club"],
-      retail: ["shopping_mall", "clothing_store", "convenience_store"]
-    };
+    let CATEGORY_TYPE_MAPPING = {};
+
+  async function loadCategoryTypes() {
+    const res = await fetch("/static/category_type_mapping.json");
+    CATEGORY_TYPE_MAPPING = await res.json();
+    init(); // Call your map init or update function after loading
+  }
+
+  window.onload = loadCategoryTypes;
 
     let placeMarkers = [];
 
@@ -111,6 +123,9 @@
             }, (results, status) => {
               if (status === google.maps.places.PlacesServiceStatus.OK) {
                 results.forEach((result) => {
+                  // Strict filtering: ensure place has the expected type
+                  if (!result.types || !result.types.includes(type)) return;
+
                   // Check if the place is already listed (to avoid duplicates)
                   if ([...ul.children].some(li => li.textContent === result.name)) return;
         
@@ -193,7 +208,7 @@
       }
     }
 
-    window.addEventListener('DOMContentLoaded', () => init());
+    // window.addEventListener('DOMContentLoaded', () => init());
 
     document.querySelectorAll('.icon-category input').forEach((checkbox) => {
       checkbox.addEventListener('change', function () {

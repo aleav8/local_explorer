@@ -1,0 +1,43 @@
+{
+    "food": [
+        "restaurant", 
+        "bakery", 
+        "cafe"
+    ],
+
+    "entertainment": [
+      "movie_theater", 
+      "museum", 
+      "art_gallery",
+      "amusement_park", 
+      "aquarium", 
+      "zoo",
+      "stadium", 
+      "bowling_alley", 
+      "tourist_attraction", 
+      "night_club", 
+      "spa",
+      "karaoke", 
+      "performing_arts_theater", 
+      "park"
+    ],
+
+    "drink": [
+        "bar", 
+        "night_club", 
+        "cafe"
+    ],
+
+    "retail": [
+        "shopping_mall", 
+        "clothing_store", 
+        "convenience_store"
+    ],
+
+    "healthcare": [
+        "dentist", 
+        "hospital", 
+        "medical_center"
+    ]
+
+  }
